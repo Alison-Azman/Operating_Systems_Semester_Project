@@ -21,8 +21,18 @@ def main():
             master_socket.bind(("", port_number))
             master_socket.listen(1)
 
-            slave_socket, slave_address = master_socket.accept()
-            print("Slaves connected successfully")
+            slaves = {}
+            for i in range(1):
+                slave_socket, slave_address = master_socket.accept()
+                slave_regis = (slave_socket.recv(1024).decode()).strip()
+                slaves[slave_regis] = slave_socket
+                print(f"Slave {slave_regis} connected successfully.")
+
+            slaves["A"].sendall(("JOB|100|A\n").encode())
+            print((slaves["A"].recv(1024).decode()).strip())
+            slaves["A"].sendall(("JOB|200|B\n").encode())
+            print((slaves["A"].recv(1024).decode()).strip())
+
 
     except Exception as e:
         print("Exception:", e)
