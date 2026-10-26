@@ -6,6 +6,29 @@ import sys
 OPTIMAL_TIME = 2
 NON_OPTIMAL_TIME = 10
 
+def time_for_job(slave_type, job_type):
+   if slave_type==job_type:
+       return OPTIMAL_TIME
+   else:
+       return NON_OPTIMAL_TIME
+
+
+# assigning the job
+#def assign_job(job_id, job_type, client_socket):
+
+
+# handling client's job
+def handle_client_job(line, client_socket, client_address):
+   parts = line.split("|")
+   if len(parts) == 3 and parts[0] == "JOB":
+       job_id = parts[1]
+       job_type = parts[2].upper()
+       print(f"Received job {job_id} (type {job_type}) from client {client_address}")
+       #assign_job(job_id, job_type, client_socket)
+   else:
+       print(f"Bad message from client {client_address}: \"{line}\"")
+
+
 
 #client connection
 def handle_client(client_socket, request_reader, client_address, first_line):
