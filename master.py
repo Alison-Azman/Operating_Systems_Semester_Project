@@ -8,6 +8,26 @@ NON_OPTIMAL_TIME = 10
 
 
 
+
+def handle_connection(conn_socket, address):
+   try:
+       with conn_socket, conn_socket.makefile("r") as request_reader:
+           first_line = request_reader.readline().rstrip("\n")
+
+
+           # Slave starts with A or B
+           # Client job will start with ("JOB|id|type").
+           if first_line.upper() in ("A", "B"):
+               handle_slave(conn_socket, request_reader, first_line.upper())
+           elif first_line.startswith("JOB|"):
+               handle_client(conn_socket, request_reader, address, first_line)
+           else:
+               print(f"Unknown connection from {address}: \"{first_line}\"")
+   except OSError as e:
+       print(f"Connection with {address} ended: {e}")
+
+
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: master.py <port number>", file=sys.stderr)
@@ -24,7 +44,8 @@ def main():
 
             while True:
                 conn_socket, address = master_socket.accept()
-
+                threading.Thread(target=handle_connection, args=(conn_socket, address),
+                                 daemon=True).start()
 
     except OSError as e:
         print(f"Exception caught when trying to listen on port {port_number} "
