@@ -7,6 +7,25 @@ OPTIMAL_TIME = 2
 NON_OPTIMAL_TIME = 10
 
 
+#client connection
+def handle_client(client_socket, request_reader, client_address, first_line):
+   print(f"Client connected from {client_address}")
+   handle_client_job(first_line, client_socket, client_address)
+
+
+   for line in request_reader:
+       line = line.rstrip("\n")
+       if line:
+           handle_client_job(line, client_socket, client_address)
+   print(f"Client {client_address} disconnected")
+
+
+
+
+#slave connections
+#def handle_slave(slave_socket, request_reader, slave_type):
+
+
 
 
 def handle_connection(conn_socket, address):
