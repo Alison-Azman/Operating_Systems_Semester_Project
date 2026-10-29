@@ -24,12 +24,12 @@ def main():
                 task = input("What task do you want the system to accomplish? (A/B)").upper()
                 while task != "A" and task != "B":
                     task = input("You must either choose task A or task B ").upper()
-                send = f'{job_id}_{task}'
+                send = f'{job_id}|{task}'
                 job_id += 1
                 client_socket.sendall((send + "\n").encode())
                 print(f"Job {task} submitted successfully!")
                 server_response = response_reader.readline().rstrip("\n")
-                server_response = server_response.split('_')
+                server_response = server_response.split('|')
                 print(f"Task {server_response[1]} - job number {server_response[0]} complete!")
 
 
