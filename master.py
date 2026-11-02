@@ -1,10 +1,15 @@
-
 import socket
 import threading
 import sys
 
 OPTIMAL_TIME = 2
 NON_OPTIMAL_TIME = 10
+
+lock = threading.Lock()
+slaves = {}
+workload = {"A": 0, "B": 0}
+jobs = {}
+
 
 def time_for_job(slave_type, job_type):
    if slave_type==job_type:
@@ -20,9 +25,9 @@ def time_for_job(slave_type, job_type):
 # handling client's job
 def handle_client_job(line, client_socket, client_address):
    parts = line.split("|")
-   if len(parts) == 3 and parts[0] == "JOB":
-       job_id = parts[1]
-       job_type = parts[2].upper()
+   if len(parts) == 2 and parts[1].upper() in ("A", "B"):
+       job_id = parts[0]
+       job_type = parts[1].upper()
        print(f"Received job {job_id} (type {job_type}) from client {client_address}")
        #assign_job(job_id, job_type, client_socket)
    else:
@@ -46,8 +51,8 @@ def handle_client(client_socket, request_reader, client_address, first_line):
 
 
 #slave connections
-#def handle_slave(slave_socket, request_reader, slave_type):
-
+def handle_slave(slave_socket, request_reader, slave_type):
+    print("It worked")
 
 
 
@@ -61,7 +66,7 @@ def handle_connection(conn_socket, address):
            # Client job will start with ("JOB|id|type").
            if first_line.upper() in ("A", "B"):
                handle_slave(conn_socket, request_reader, first_line.upper())
-           elif first_line.startswith("JOB|"):
+           elif "|" in first_line:
                handle_client(conn_socket, request_reader, address, first_line)
            else:
                print(f"Unknown connection from {address}: \"{first_line}\"")
