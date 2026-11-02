@@ -19,7 +19,10 @@ def time_for_job(slave_type, job_type):
 
 
 # assigning the job
-#def assign_job(job_id, job_type, client_socket):
+def assign_job(job_id, job_type, client_socket):
+    pass
+
+
 
 
 # handling client's job
@@ -52,8 +55,19 @@ def handle_client(client_socket, request_reader, client_address, first_line):
 
 #slave connections
 def handle_slave(slave_socket, request_reader, slave_type):
-    print("It worked")
+    with lock:
+        slaves[slave_type]=slave_socket
+    print(f"Slave {slave_type} is connected")
 
+    for line in request_reader:
+        line = line.rstrip("\n").split("|")
+        if len(line) == 2 and line[0]=="COMPLETE":
+            job_id = line[1]
+            print(f"Slave {slave_type} has successfully completed job {job_id}")
+
+    #need to write code where when a job is done it updates the records
+    # it should tell the client
+    #disconnect and remove job when done
 
 
 def handle_connection(conn_socket, address):
