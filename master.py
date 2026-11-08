@@ -46,8 +46,8 @@ def handle_client(client_socket, request_reader, client_address, first_line):
 
 
 #slave connections
-#def handle_slave(slave_socket, request_reader, slave_type):
-
+def handle_slave(slave_socket, request_reader, slave_type):
+    print("Handle slave")
 
 
 
