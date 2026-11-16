@@ -89,10 +89,12 @@ def handle_slave(slave_socket, request_reader, slave_type):
                 chosen, time, client_socket = jobs[job_id]
                 workload[chosen] -= time
                 del jobs[job_id]
-            message= f"COMPLETE|{job_id}\n"
-            client_socket.sendall(message.encode())
-            print(f"Notified client that the job {job_id} is now completed")
-
+            try:
+                message= f"COMPLETE|{job_id}\n"
+                client_socket.sendall(message.encode())
+                print(f"Notified client that the job {job_id} is now completed")
+            except OSError as e:
+                print(f"Could not tell client about job {job_id}, ended:{e}")
 
 
 
