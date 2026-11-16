@@ -95,13 +95,10 @@ def handle_slave(slave_socket, request_reader, slave_type):
                 print(f"Notified client that the job {job_id} is now completed")
             except OSError as e:
                 print(f"Could not tell client about job {job_id}, ended:{e}")
-
-
-
-
-    #need to write code where when a job is done it updates the records
-    # it should tell the client
-    #disconnect and remove job when done
+    print(f"Slave {slave_type} disconnected")
+    with lock:
+        del slaves[slave_type]
+        workload[slave_type]=0
 
 
 def handle_connection(conn_socket, address):
