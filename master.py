@@ -20,7 +20,28 @@ def time_for_job(slave_type, job_type):
 
 # assigning the job
 def assign_job(job_id, job_type, client_socket):
-    pass
+    with lock:
+        if "A" not in slaves and "B" not in slaves:
+            print(f"No slaves connected to assign job {job_id}")
+            return
+        chosen=""
+        if "A" not in slaves:
+            chosen ="B"
+        elif "B" not in slaves:
+            chosen ="A"
+        elif time_for_job("A", job_type) + workload["A"] < time_for_job("B", job_type) + workload["B"]:
+            chosen = "A"
+        else:
+            chosen = "B"
+
+        workload[chosen] += time_for_job(chosen, job_type)
+        jobs[job_id] = chosen, time_for_job(chosen, job_type), client_socket
+        message = f"{job_id}|{job_type}\n"
+        slaves[chosen].sendall(message.encode())
+        print(f"Sent job {job_id} to slave {chosen}")
+
+
+
 
 
 
@@ -32,7 +53,7 @@ def handle_client_job(line, client_socket, client_address):
        job_id = parts[0]
        job_type = parts[1].upper()
        print(f"Received job {job_id} (type {job_type}) from client {client_address}")
-       #assign_job(job_id, job_type, client_socket)
+       assign_job(job_id, job_type, client_socket)
    else:
        print(f"Bad message from client {client_address}: \"{line}\"")
 
@@ -77,7 +98,7 @@ def handle_connection(conn_socket, address):
 
 
            # Slave starts with A or B
-           # Client job will start with ("JOB|id|type").
+           # Client job will start with ("id|type").
            if first_line.upper() in ("A", "B"):
                handle_slave(conn_socket, request_reader, first_line.upper())
            elif "|" in first_line:
