@@ -43,9 +43,6 @@ def assign_job(job_id, job_type, client_socket):
 
 
 
-
-
-
 # handling client's job
 def handle_client_job(line, client_socket, client_address):
    parts = line.split("|")
@@ -85,6 +82,20 @@ def handle_slave(slave_socket, request_reader, slave_type):
         if len(line) == 2 and line[0]=="COMPLETE":
             job_id = line[1]
             print(f"Slave {slave_type} has successfully completed job {job_id}")
+            with lock:
+                if job_id not in jobs:
+                    print(f"Warning job id {job_id} is unknown")
+                    continue
+                chosen, time, client_socket = jobs[job_id]
+                workload[chosen] -= time
+                del jobs[job_id]
+            message= f"COMPLETE|{job_id}\n"
+            client_socket.sendall(message.encode())
+            print(f"Notified client that the job {job_id} is now completed")
+
+
+
+
 
     #need to write code where when a job is done it updates the records
     # it should tell the client
