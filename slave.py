@@ -7,10 +7,56 @@
 # Python socket reference sheets:
 # https://www.w3schools.com/python/ref_module_socket.asp
 # https://www.geeksforgeeks.org/python/socket-programming-python/
+# Python thread reference sheets:
 
-import socket
 import sys
+import socket
 import time
+from queue import Queue
+import threading
+
+def receive_jobs(slave_socket, slave_type, job_queue):
+    with slave_socket.makefile("r") as job_reader:
+
+        try:
+            job = job_reader.readline().rstrip("\n")
+
+            while job:
+                job_parts = job.split("|")
+
+                if job_parts[0] == "JOB":
+                    job_id = job_parts[1]
+                    job_type = job_parts[2]
+
+                    job_queue.put((job_id, job_type))
+                    print(f"Received JOB with ID {job_id} and TYPE {job_type}")
+
+                job = job_reader.readline().rstrip("\n")
+
+        finally:
+            job_queue.put(None)
+
+def process_jobs(job_queue, slave_type, slave_socket):
+    while True:
+        job = job_queue.get()
+        if job is None:
+            break
+
+        next_job_id, next_job_type = job
+
+        if slave_type == next_job_type:
+            process_time = 2
+        else:
+            process_time = 10
+
+        print(f"Processing JOB {next_job_id}...")
+        time.sleep(process_time)
+        print(f"JOB {next_job_id} complete.")
+
+        slave_socket.sendall(
+            f"COMPLETE|{next_job_id}\n".encode()
+        )
+
 
 def main():
     if len(sys.argv) != 4:
@@ -20,7 +66,7 @@ def main():
     host_name = sys.argv[1]
     port_number = int(sys.argv[2])
     slave_type = sys.argv[3].upper()
-    if not slave_type.isalpha or not len(slave_type) == 1:
+    if slave_type not in ("A", "B"):
         print("Invalid slave type.")
         sys.exit(1)
 
@@ -30,25 +76,16 @@ def main():
             print("Connected successfully")
             slave_socket.sendall(f"{slave_type}\n".encode())
 
-            job = slave_socket.recv(1024).decode()
-            while job:
-                job_parts = job.split("|")
-                if job_parts[0] == "JOB":
-                    job_id = job_parts[1]
-                    job_type = job_parts[2]
-                    print(f"Received JOB with ID {job_id} and TYPE {job_type}")
+            job_queue = Queue()
 
-                    if slave_type == job_type:
-                        process_time = 2
-                    else:
-                        process_time = 10
+            r_thread = threading.Thread(target=receive_jobs, args=(slave_socket, slave_type, job_queue))
+            p_thread = threading.Thread(target=process_jobs, args = (job_queue, slave_type, slave_socket))
 
-                    print(f"Processing JOB {job_id}...")
-                    time.sleep(process_time)
-                    print(f"JOB {job_id} complete.")
-                    slave_socket.sendall((f"COMPLETE|{job_id}\n").encode())
-                job = slave_socket.recv(1024).decode()
+            r_thread.start()
+            p_thread.start()
 
+            r_thread.join()
+            p_thread.join()
 
 
     except Exception as e:
