@@ -24,12 +24,12 @@ def receive_jobs(slave_socket, slave_type, job_queue):
             while job:
                 job_parts = job.split("|")
 
-                if job_parts[0] == "JOB":
-                    job_id = job_parts[1]
-                    job_type = job_parts[2]
+                if len(job_parts) == 2 and job_parts[1] in ("A", "B"):
+                    job_id = job_parts[0]
+                    job_type = job_parts[1]
 
-                    job_queue.put((job_id, job_type))
-                    print(f"Received JOB with ID {job_id} and TYPE {job_type}")
+                job_queue.put((job_id, job_type))
+                print(f"Received JOB with ID {job_id} and TYPE {job_type}")
 
                 job = job_reader.readline().rstrip("\n")
 
