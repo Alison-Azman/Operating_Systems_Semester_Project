@@ -1,10 +1,15 @@
-
 import socket
 import threading
 import sys
 
 OPTIMAL_TIME = 2
 NON_OPTIMAL_TIME = 10
+
+lock = threading.Lock()
+slaves = {}
+workload = {"A": 0, "B": 0}
+jobs = {}
+
 
 def time_for_job(slave_type, job_type):
    if slave_type==job_type:
@@ -14,17 +19,38 @@ def time_for_job(slave_type, job_type):
 
 
 # assigning the job
-#def assign_job(job_id, job_type, client_socket):
+def assign_job(job_id, job_type, client_socket):
+    with lock:
+        if "A" not in slaves and "B" not in slaves:
+            print(f"No slaves connected to assign job {job_id}")
+            return
+        chosen=""
+        if "A" not in slaves:
+            chosen ="B"
+        elif "B" not in slaves:
+            chosen ="A"
+        elif time_for_job("A", job_type) + workload["A"] < time_for_job("B", job_type) + workload["B"]:
+            chosen = "A"
+        else:
+            chosen = "B"
+
+        workload[chosen] += time_for_job(chosen, job_type)
+        jobs[job_id] = chosen, time_for_job(chosen, job_type), client_socket
+        message = f"{job_id}|{job_type}\n"
+        slaves[chosen].sendall(message.encode())
+        print(f"Sent job {job_id} to slave {chosen}")
+
+
 
 
 # handling client's job
 def handle_client_job(line, client_socket, client_address):
    parts = line.split("|")
-   if len(parts) == 3 and parts[0] == "JOB":
-       job_id = parts[1]
-       job_type = parts[2].upper()
+   if len(parts) == 2 and parts[1].upper() in ("A", "B"):
+       job_id = parts[0]
+       job_type = parts[1].upper()
        print(f"Received job {job_id} (type {job_type}) from client {client_address}")
-       #assign_job(job_id, job_type, client_socket)
+       assign_job(job_id, job_type, client_socket)
    else:
        print(f"Bad message from client {client_address}: \"{line}\"")
 
@@ -47,8 +73,32 @@ def handle_client(client_socket, request_reader, client_address, first_line):
 
 #slave connections
 def handle_slave(slave_socket, request_reader, slave_type):
-    print("Handle slave")
+    with lock:
+        slaves[slave_type]=slave_socket
+    print(f"Slave {slave_type} is connected")
 
+    for line in request_reader:
+        line = line.rstrip("\n").split("|")
+        if len(line) == 2 and line[0]=="COMPLETE":
+            job_id = line[1]
+            print(f"Slave {slave_type} has successfully completed job {job_id}")
+            with lock:
+                if job_id not in jobs:
+                    print(f"Warning job id {job_id} is unknown")
+                    continue
+                chosen, time, client_socket = jobs[job_id]
+                workload[chosen] -= time
+                del jobs[job_id]
+            try:
+                message= f"COMPLETE|{job_id}\n"
+                client_socket.sendall(message.encode())
+                print(f"Notified client that the job {job_id} is now completed")
+            except OSError as e:
+                print(f"Could not tell client about job {job_id}, ended:{e}")
+    print(f"Slave {slave_type} disconnected")
+    with lock:
+        del slaves[slave_type]
+        workload[slave_type]=0
 
 
 def handle_connection(conn_socket, address):
@@ -58,10 +108,10 @@ def handle_connection(conn_socket, address):
 
 
            # Slave starts with A or B
-           # Client job will start with ("JOB|id|type").
+           # Client job will start with ("id|type").
            if first_line.upper() in ("A", "B"):
                handle_slave(conn_socket, request_reader, first_line.upper())
-           elif first_line.startswith("JOB|"):
+           elif "|" in first_line:
                handle_client(conn_socket, request_reader, address, first_line)
            else:
                print(f"Unknown connection from {address}: \"{first_line}\"")
